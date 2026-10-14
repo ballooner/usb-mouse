@@ -8,6 +8,7 @@
 #include "PMW3389_driver.h"
 #include "stm32f4xx_hal_spi.h"
 #include "stm32f4xx_hal_tim.h"
+#include "stm32f4xx_hal.h"
 
 static SPI_HandleTypeDef* 	PMW_hspi;
 static GPIO_TypeDef*		PMW_cs_port;
@@ -39,7 +40,10 @@ void pmw3389_init(SPI_HandleTypeDef* hspi, GPIO_TypeDef* cs_port, TIM_HandleType
 	PMW_htim3	= 	htim3;
 	PMW_cs_pin	=	cs_pin;
 
-	HAL_TIM_Base_Start(&htim3);
+	HAL_TIM_Base_Start(htim3);
+
+	//
+	HAL_Delay(50);
 }
 
 // Send a write register command to the PMW3389
@@ -47,7 +51,7 @@ HAL_StatusTypeDef pmw3389_write_register(uint8_t address, uint8_t data_in)
 {
 	if (!PMW_hspi || !PMW_cs_port || !PMW_htim3)
 	{
-		// pmw3389_init() wasn't called if this happens
+		// pmw3389_init() wasn't called or wasn't successful
 		return HAL_ERROR;
 	}
 
@@ -72,6 +76,45 @@ HAL_StatusTypeDef pmw3389_write_register(uint8_t address, uint8_t data_in)
 }
 
 
-void pmw3389_read_register();
-void pmw3389_enable();
+HAL_StatusTypeDef pmw3389_read_register(uint8_t address, uint8_t* data)
+{
+	if (!PMW_hspi || !PMW_cs_port || !PMW_htim3)
+	{
+		// pmw3389_init() wasn't called or wasn't successful
+		return HAL_ERROR;
+	}
+
+	uint8_t packet = address & 0x7F;
+	uint8_t dummy_tx = 0x00;
+
+	// Bring CS low
+	HAL_GPIO_WritePin(PMW_cs_port, PMW_cs_pin, GPIO_PIN_RESET);
+
+	// Send packet and store received data into data pointer
+	HAL_StatusTypeDef retVal = HAL_SPI_Transmit(PMW_hspi, &packet, 1, 10);
+
+	if (retVal == HAL_OK)
+	{
+		delay_us(180);
+        // Clock in the register value
+        retVal = HAL_SPI_TransmitReceive(
+            PMW_hspi,
+            &dummy_tx,
+            data,
+            1,
+            10
+        );
+	}
+
+	// Bring CS high
+	HAL_GPIO_WritePin(PMW_cs_port, PMW_cs_pin, GPIO_PIN_SET);
+
+	if (retVal == HAL_OK)
+	{
+		delay_us(20);
+	}
+
+	return retVal;
+}
+
 void pmw3389_load_srom();

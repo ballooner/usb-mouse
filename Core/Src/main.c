@@ -19,6 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
+#include "stm32f4xx_hal.h"
+#include "PMW3389_driver.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -100,7 +103,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-
+  pmw3389_init(&hspi2, spi_cs_GPIO_Port, &htim3, spi_cs_Pin);
 
   /* USER CODE END 2 */
 
@@ -111,6 +114,49 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  uint8_t productID, revision, shutter, inverse_id;
+
+	  char uart_buffer[128];
+
+	  HAL_StatusTypeDef status = HAL_ERROR;
+	  if ((status = pmw3389_read_register(0x00, &productID)) != HAL_OK) goto done_label;
+	  if ((status = pmw3389_read_register(0x01, &revision)) != HAL_OK) goto done_label;
+	  if ((status = pmw3389_read_register(0x0B, &shutter)) != HAL_OK) goto done_label;
+	  if ((status = pmw3389_read_register(0x3F, &inverse_id)) != HAL_OK) goto done_label;
+	  done_label:
+	  if (status == HAL_OK)
+	  {
+		  int len = snprintf(
+				  uart_buffer,
+				  sizeof(uart_buffer),
+				  "PID: 0x%02X\r\n"
+				  "Revision: 0x%02X\r\n"
+				  "Shutter: 0x%02X\r\n"
+				  "Inverse ID: 0x%02X\r\n",
+				  productID,
+				  revision,
+				  shutter,
+				  inverse_id
+				  );
+
+		  if (len > 0 && len < sizeof(uart_buffer))
+		  {
+			  HAL_UART_Transmit(
+					  &huart2,
+					  (uint8_t*)uart_buffer,
+					  (uint16_t)len,
+					  100);
+		  }
+	  } else
+	  {
+		  const char* msg = "SPI read failed\r\n";
+			HAL_UART_Transmit(&huart2,
+					(uint8_t*)msg,
+					strlen(msg),
+					100);
+	  }
+
+	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -183,7 +229,7 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

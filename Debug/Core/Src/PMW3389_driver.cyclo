@@ -1,0 +1,4 @@
+../Core/Src/PMW3389_driver.c:18:13:delay_us	3
+../Core/Src/PMW3389_driver.c:31:6:pmw3389_init	4
+../Core/Src/PMW3389_driver.c:50:19:pmw3389_write_register	5
+../Core/Src/PMW3389_driver.c:79:19:pmw3389_read_register	6
