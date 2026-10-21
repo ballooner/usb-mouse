@@ -114,14 +114,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint8_t productID, revision, shutter, inverse_id;
+	  uint8_t productID, inverse_id;
 
 	  char uart_buffer[128];
 
 	  HAL_StatusTypeDef status = HAL_ERROR;
 	  if ((status = pmw3389_read_register(0x00, &productID)) != HAL_OK) goto done_label;
-	  if ((status = pmw3389_read_register(0x01, &revision)) != HAL_OK) goto done_label;
-	  if ((status = pmw3389_read_register(0x0B, &shutter)) != HAL_OK) goto done_label;
 	  if ((status = pmw3389_read_register(0x3F, &inverse_id)) != HAL_OK) goto done_label;
 	  done_label:
 	  if (status == HAL_OK)
@@ -130,12 +128,8 @@ int main(void)
 				  uart_buffer,
 				  sizeof(uart_buffer),
 				  "PID: 0x%02X\r\n"
-				  "Revision: 0x%02X\r\n"
-				  "Shutter: 0x%02X\r\n"
 				  "Inverse ID: 0x%02X\r\n",
 				  productID,
-				  revision,
-				  shutter,
 				  inverse_id
 				  );
 
